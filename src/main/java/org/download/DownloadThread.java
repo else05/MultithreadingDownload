@@ -3,6 +3,8 @@ package org.download;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 
 /**
  * Created by Else05 on 2016/3/22.
@@ -20,9 +22,8 @@ public class DownloadThread implements Runnable {
         this.url = url;
     }
 
-    @Override
     public void run() {
-        System.out.println("\n ======" + Thread.currentThread().getName() + "======");
+        System.out.println("\n ======" + Thread.currentThread().getName() + " boot======");
         HttpURLConnection conn = null;
         long len = 0L ;
         try {
@@ -33,17 +34,24 @@ public class DownloadThread implements Runnable {
 
 
             if (conn.getResponseCode() == 206) {
+                long s = System.currentTimeMillis() ;
                 InputStream inputStream = conn.getInputStream();
                 BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
+
                 RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rwd");
+
                 randomAccessFile.setLength(len);
                 randomAccessFile.seek(start);
 
-                byte[] bytes = new byte[2048];
-                int lenTem = 0;
+                byte[] bytes = new byte[1024];
+                int lenTem ;
                 while ((lenTem = bufferedInputStream.read(bytes)) != -1) {
                     randomAccessFile.write(bytes, 0, lenTem);
                 }
+                long e = System.currentTimeMillis() ;
+                System.out.println("====" + Thread.currentThread().getName() + "====>" + (e - s) );
+                App.time += (e - s) ;
+                System.out.println("\n" + App.time);
                 bufferedInputStream.close();
                 randomAccessFile.close();
                 inputStream.close();

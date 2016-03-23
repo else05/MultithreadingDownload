@@ -12,6 +12,7 @@ import java.nio.file.Paths;
  * Hello world!
  */
 public class App {
+    public static long time = 0L ;
     public static void main(String[] args) {
 
         int threadNum = 10 ;
@@ -27,18 +28,13 @@ public class App {
             len = conn.getContentLength();
             conn.disconnect();
 
-            path = Paths.get("G:/new/video.mp4");
+            path = Paths.get("G:/new/QQ.exe");
 
             block = len%threadNum == 0 ? len/threadNum : len/threadNum + 1 ;
-            System.out.println("每个线程下载："+block);
+            System.out.println("每个线程下载："+block/1024/1024 + "M");
 
             long start = 0L ;
             long end = 0L ;
-
-//            start = 0 * block ;
-//            end = start + (block - 1);
-//            System.out.println("start:" + start + " --> end:" + end);
-//            new App().down(path.toFile(), start, end, url);
 
             for (int i = 0; i < threadNum; i++) {
                 start = i * block ;
@@ -46,6 +42,7 @@ public class App {
                 System.out.println("start:" + start + " --> end:" + end);
                 new Thread(new DownloadThread(path.toFile(), start, end, url)).start();
             }
+//            new App().down(path.toFile() , 0 , len ,url);
         } catch (Exception e) {
             e.printStackTrace();
         }finally {
@@ -64,6 +61,7 @@ public class App {
 
 
             if(conn.getResponseCode() == 206 ){
+                long s = System.currentTimeMillis() ;
                 InputStream inputStream = conn.getInputStream();
                 RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rwd");
                 randomAccessFile.setLength(len);
