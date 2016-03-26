@@ -1,21 +1,43 @@
 package org.download;
 
-import java.io.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.RandomAccessFile;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.nio.MappedByteBuffer;
+import java.nio.channels.Channels;
 import java.nio.channels.FileChannel;
+import java.nio.channels.ReadableByteChannel;
 
 /**
+ * 普通线程，没有返回值
  * Created by Else05 on 2016/3/22.
  */
 public class DownloadThread implements Runnable {
+    /**
+     * 保存的文件路径
+     */
     private File file ;
+    /**
+     * 开始下载位置
+     */
     private long start ;
+    /**
+     * 结束下载位置
+     */
     private long end ;
+    /**
+     * 下载地址
+     */
     private URL url ;
+    /**
+     * 该文件总长度
+     */
+    private long totalLength ;
 
-    public DownloadThread(File file, long start, long end, URL url) {
+    public DownloadThread(File file , long totalLength, long start, long end, URL url) {
+        this.totalLength = totalLength ;
         this.start = start;
         this.file = file;
         this.end = end;
@@ -23,42 +45,34 @@ public class DownloadThread implements Runnable {
     }
 
     public void run() {
-        System.out.println("\n ======" + Thread.currentThread().getName() + " boot======");
         HttpURLConnection conn = null;
-        long len = 0L ;
         try {
             conn = (HttpURLConnection)url.openConnection();
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Range" , "bytes=" + start + "-" + end);
-            len = conn.getContentLength();
 
-
+            // 状态码为206才支持多线程下载
             if (conn.getResponseCode() == 206) {
-                long s = System.currentTimeMillis() ;
                 InputStream inputStream = conn.getInputStream();
-                BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
+
+                ReadableByteChannel inChannel = Channels.newChannel(inputStream);
 
                 RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rwd");
-
-                randomAccessFile.setLength(len);
+                randomAccessFile.setLength(totalLength);
                 randomAccessFile.seek(start);
+                FileChannel outChannel = randomAccessFile.getChannel();
 
-                byte[] bytes = new byte[1024];
-                int lenTem ;
-                while ((lenTem = bufferedInputStream.read(bytes)) != -1) {
-                    randomAccessFile.write(bytes, 0, lenTem);
-                }
-                long e = System.currentTimeMillis() ;
-                System.out.println("====" + Thread.currentThread().getName() + "====>" + (e - s) );
-                App.time += (e - s) ;
-                System.out.println("\n" + App.time);
-                bufferedInputStream.close();
+                long writeCount = outChannel.transferFrom(inChannel, start, (end - start));
+                System.out.println("write " + writeCount + " byte !");
+                System.out.println("线程 " + Thread.currentThread().getName() + " 下载: " + start + "--->" + end + " 预计下载： " + (end - start) + ", 实际下载：" + writeCount);
+
+                inChannel.close();
+                outChannel.close();
                 randomAccessFile.close();
                 inputStream.close();
             } else {
-                System.out.println("\nerror :"+conn.getResponseCode());
+                System.out.println("\n线程 " + Thread.currentThread().getName() + " 返回网络状态码（下载失败）：" +conn.getResponseCode());
             }
-            System.out.println("线程" + Thread.currentThread().getName() + "下载完成 : " + start + "--->" + end);
         } catch (IOException e) {
             e.printStackTrace();
         }finally {
@@ -96,5 +110,13 @@ public class DownloadThread implements Runnable {
 
     public void setUrl(URL url) {
         this.url = url;
+    }
+
+    public long getTotalLength() {
+        return totalLength;
+    }
+
+    public void setTotalLength(long totalLength) {
+        this.totalLength = totalLength;
     }
 }

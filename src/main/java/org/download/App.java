@@ -15,7 +15,7 @@ public class App {
     public static long time = 0L ;
     public static void main(String[] args) {
 
-        int threadNum = 10 ;
+        int threadNum = 30 ;
         long block = 0L ;
         System.out.println("Hello World!");
         URL url = null ;
@@ -30,56 +30,12 @@ public class App {
 
             path = Paths.get("G:/new/QQ.exe");
 
-            block = len%threadNum == 0 ? len/threadNum : len/threadNum + 1 ;
-            System.out.println("每个线程下载："+block/1024/1024 + "M");
+            new MultithreadingDownload().download(path.toFile() , len , threadNum , url);
 
-            long start = 0L ;
-            long end = 0L ;
-
-            for (int i = 0; i < threadNum; i++) {
-                start = i * block ;
-                end = start + (block - 1);
-                System.out.println("start:" + start + " --> end:" + end);
-                new Thread(new DownloadThread(path.toFile(), start, end, url)).start();
-            }
-//            new App().down(path.toFile() , 0 , len ,url);
         } catch (Exception e) {
             e.printStackTrace();
         }finally {
         }
     }
 
-    public void down(File file , long start , long end , URL url) {
-        System.out.println("\n ======" + Thread.currentThread().getName() + "======");
-        HttpURLConnection conn = null;
-        long len = 0L ;
-        try {
-            conn = (HttpURLConnection)url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Range" , "bytes=" + start + "-" + end);
-            len = conn.getContentLength();
-
-
-            if(conn.getResponseCode() == 206 ){
-                long s = System.currentTimeMillis() ;
-                InputStream inputStream = conn.getInputStream();
-                RandomAccessFile randomAccessFile = new RandomAccessFile(file, "rwd");
-                randomAccessFile.setLength(len);
-                randomAccessFile.seek(start);
-
-                byte[] bytes = new byte[1024];
-                int lenTem = 0 ;
-                while ((lenTem = inputStream.read(bytes)) != -1) {
-                    randomAccessFile.write(bytes,0,lenTem);
-                }
-                randomAccessFile.close();
-                inputStream.close();
-            }
-            System.out.println("线程" + Thread.currentThread().getName() + "下载完成 : " + start + "--->" + end);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }finally {
-
-        }
-    }
 }
